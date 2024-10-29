@@ -7,9 +7,26 @@ function processResponses() {
     // Get the active spreadsheet and the first sheet
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Form Responses 1'); // Change the sheet name if necessary
     var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+
+    // Get the indices of the required columns
+    var paymentStatusIndex = headers.indexOf('PaymentStatus_manual');
+    var sentTicketStatusIndex = headers.indexOf('SentTicketStatus_auto');
 
     // Loop through each row of data (skip the header row)
     for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+
+        // Skip the row if the SentTicketStatus_auto column is already set to 1
+        if (row[sentTicketStatusIndex] == '1') {
+            continue;
+        }
+
+        // Skip the row if the PaymentStatus_manual column is not set to 1
+        if (row[paymentStatusIndex] != '1') {
+            continue;
+        }
+
         var row = data[i];
         var email = row[1]; // Assuming the email is the second column
         var status = determineStatus(row); // Custom function to determine status
@@ -89,6 +106,6 @@ function generateHtmlTicketContent(status) {
 
 function convertHtmlToPdf(htmlContent) {
     var blob = Utilities.newBlob(htmlContent, 'text/html', 'status.html');
-    var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName('status.pdf');
+    var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName('biljett.pdf');
     return pdf;
 }
