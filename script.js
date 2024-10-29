@@ -1,6 +1,9 @@
 // This script is intended to be used as a Google Apps Script
 
 function processResponses() {
+    // Run setup function to ensure the environment is set up
+    setupSheet();
+
     // Get the active spreadsheet and the first sheet
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Form Responses 1'); // Change the sheet name if necessary
     var data = sheet.getDataRange().getValues();
@@ -13,18 +16,35 @@ function processResponses() {
 
         var subject = 'Your Form Submission Status';
         var htmlContent = generateHtmlMailContent(status);
-        var htmlTicket = generateHtmlTicketContent();
+        var htmlTicket = generateHtmlTicketContent(status);
 
         // Convert HTML to PDF
         var pdf = convertHtmlToPdf(htmlTicket);
 
         // Send email with PDF attachment
         MailApp.sendEmail({
-        to: email,
-        subject: subject,
-        htmlBody: htmlContent,
-        attachments: [pdf]
+            to: email,
+            subject: subject,
+            htmlBody: htmlContent,
+            attachments: [pdf]
         });
+
+        // Update the SentTicketStatus_auto column in the sheet
+        var sentTicketStatusColumn = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].indexOf('SentTicketStatus_auto') + 1;
+        sheet.getRange(i + 1, sentTicketStatusColumn).setValue('1');
+    }
+}
+
+function setupSheet() {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Form Responses 1'); // Change the sheet name if necessary
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+    // Check if the required columns are already present
+    if (headers.indexOf('PaymentStatus_manual') === -1) {
+        sheet.getRange(1, headers.length + 1).setValue('PaymentStatus_manual');
+    }
+    if (headers.indexOf('SentTicketStatus_auto') === -1) {
+        sheet.getRange(1, headers.length + 2).setValue('SentTicketStatus_auto');
     }
 }
 
@@ -49,7 +69,7 @@ function generateHtmlMailContent(status) {
         </html>
     `;
 }
-  
+
 function generateHtmlTicketContent(status) {
     return `
         <html>
@@ -61,10 +81,6 @@ function generateHtmlTicketContent(status) {
             <p><strong>Status:</strong> ${status}</p>
             <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
             <p><strong>Event:</strong> Your Event Name</p>
-            <p><strong>Location:</strong> Event Location</p>
-            <hr>
-            <p style="text-align: center;">Please bring this ticket to the event.</p>
-            <p style="text-align: center;">Best regards,<br>Your Team</p>
             </div>
         </body>
         </html>
@@ -73,6 +89,6 @@ function generateHtmlTicketContent(status) {
 
 function convertHtmlToPdf(htmlContent) {
     var blob = Utilities.newBlob(htmlContent, 'text/html', 'status.html');
-    var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName('biljett.pdf');
+    var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName('status.pdf');
     return pdf;
 }
