@@ -1,3 +1,3 @@
 = TODO
 
-[ ] Add global variables for parameters in the ticket, so it's easier to config everything needed in one place rather than navigating through the code.
+* [ ] Add global variables for parameters in the ticket, so it's easier to config everything needed in one place rather than navigating through the code.
