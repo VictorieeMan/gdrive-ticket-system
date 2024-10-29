@@ -12,6 +12,8 @@ function processResponses() {
     // Get the indices of the required columns
     var paymentStatusIndex = headers.indexOf('PaymentStatus_manual');
     var sentTicketStatusIndex = headers.indexOf('SentTicketStatus_auto');
+    var lastReminderIndex = headers.indexOf('LastReminder');
+    var reminderCountIndex = headers.indexOf('ReminderCount');
 
     // Loop through each row of data (skip the header row)
     for (var i = 1; i < data.length; i++) {
@@ -24,10 +26,19 @@ function processResponses() {
 
         // Skip the row if the PaymentStatus_manual column is not set to 1
         if (row[paymentStatusIndex] != '1') {
+            // Check if a reminder needs to be sent
+            var lastReminder = row[lastReminderIndex];
+            if (shouldSendReminder(lastReminder)) {
+                sendReminderEmail(row[1]); // Assuming the email is the second column
+                sheet.getRange(i + 1, lastReminderIndex + 1).setValue(new Date());
+
+                // Increment the reminder count
+                var reminderCount = row[reminderCountIndex] || 0;
+                sheet.getRange(i + 1, reminderCountIndex + 1).setValue(reminderCount + 1);
+            }
             continue;
         }
 
-        var row = data[i];
         var email = row[1]; // Assuming the email is the second column
         var status = determineStatus(row); // Custom function to determine status
 
@@ -47,8 +58,7 @@ function processResponses() {
         });
 
         // Update the SentTicketStatus_auto column in the sheet
-        var sentTicketStatusColumn = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].indexOf('SentTicketStatus_auto') + 1;
-        sheet.getRange(i + 1, sentTicketStatusColumn).setValue('1');
+        sheet.getRange(i + 1, sentTicketStatusIndex + 1).setValue('1');
     }
 }
 
@@ -62,6 +72,12 @@ function setupSheet() {
     }
     if (headers.indexOf('SentTicketStatus_auto') === -1) {
         sheet.getRange(1, headers.length + 2).setValue('SentTicketStatus_auto');
+    }
+    if (headers.indexOf('LastReminder') === -1) {
+        sheet.getRange(1, headers.length + 3).setValue('LastReminder');
+    }
+    if (headers.indexOf('ReminderCount') === -1) {
+        sheet.getRange(1, headers.length + 4).setValue('ReminderCount');
     }
 }
 
@@ -108,4 +124,20 @@ function convertHtmlToPdf(htmlContent) {
     var blob = Utilities.newBlob(htmlContent, 'text/html', 'status.html');
     var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName('biljett.pdf');
     return pdf;
+}
+
+function shouldSendReminder(lastReminder) {
+    if (!lastReminder) {
+        return true;
+    }
+    var lastReminderDate = new Date(lastReminder);
+    var currentDate = new Date();
+    var diffDays = Math.floor((currentDate - lastReminderDate) / (1000 * 60 * 60 * 24));
+    return diffDays >= 3;
+}
+
+function sendReminderEmail(email) {
+    var subject = 'Reminder: Payment Pending';
+    var body = 'Dear User,\n\nThis is a reminder that your payment is still pending. Please complete your payment as soon as possible.\n\nThank you.';
+    MailApp.sendEmail(email, subject, body);
 }
