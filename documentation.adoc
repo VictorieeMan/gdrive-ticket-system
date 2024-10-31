@@ -1,0 +1,3 @@
+= Documentation
+
+On each form entry a 'ticket_id' is generated. These are on the form of two leading capital letters a hyphen and two digits between 0 and 9 like this 'AA-nn', where AA symbolizes any two letters in the english alphabet and n is any number between 0 and 9. This is used to identify the ticket in the system. If you see a ticket_id with more than two digits that just means that the system has handled a collision of ticket_ids and has added more digits to the ticket_id to make it unique. This should be rare.
