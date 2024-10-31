@@ -1,13 +1,23 @@
 // This script is intended to be used as a Google Apps Script
 
+/* General information
+This script expects to be attached to a Google Sheets document that is linked to a Google Form.
+On each run it will check the responses to the form and send an email to the respondent based on the status of their submission.
+
+Tickets will be generated and sent to those who are marked as paid, and the sentTicketStatus_auto column will be updated to prevent sending more than one ticket email; if anyone requests a resend of the ticket just reset the sentTicketStatus_auto column to empty.
+
+Payment reminders will be sent to those who are in the list but still aren't marked as paid. The reminders are limited so they won't be sent more than once every three days, note that the code only runs on manual trigger so nothing is sent without manual runs.
+*/
+
 /* Ticket parameters
 for easy customization per event */
 
-const EVENT_URL = 'Your Event URL'; // If you have a website for the event
-const EVENT_NAME = 'Your Event Name';
-const EVENT_DATE = 'Your Event Date';
-const EVENT_TIME = 'Your Event Time';
-const EVENT_PLACE = 'Your Event Place';
+// Not int use yet
+// const EVENT_URL = 'Your Event URL'; // If you have a website for the event
+// const EVENT_NAME = 'Your Event Name';
+// const EVENT_DATE = 'Your Event Date';
+// const EVENT_TIME = 'Your Event Time';
+// const EVENT_PLACE = 'Your Event Place';
 
 /* Email generation functions
 Adjust these functions if you want to adjust the content of the emails sent.*/
