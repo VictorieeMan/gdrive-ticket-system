@@ -26,6 +26,8 @@ function processResponses() {
             var email = row[1]; // Assuming the email is the second column
             var uniqueHash = generateUniqueHash(timestamp, email);
             sheet.getRange(i + 1, hashIndex + 1).setValue(uniqueHash);
+        } else {
+            var uniqueHash = row[hashIndex];
         }
 
         // Skip the row if the SentTicketStatus_auto column is already set to 1
@@ -53,7 +55,7 @@ function processResponses() {
 
         var subject = 'Your Form Submission Status';
         var htmlContent = generateHtmlMailContent(status);
-        var htmlTicket = generateHtmlTicketContent(status);
+        var htmlTicket = generateHtmlTicketContent(status, uniqueHash);
 
         // Convert HTML to PDF
         var pdf = convertHtmlToPdf(htmlTicket);
@@ -115,7 +117,12 @@ function generateHtmlMailContent(status) {
     `;
 }
 
-function generateHtmlTicketContent(status) {
+function generateHtmlTicketContent(status, uniqueHash) {
+    var qrCodeUrl = `https://quickchart.io/qr?text=${encodeURIComponent(uniqueHash)}&size=150`;
+    var qrCodeBlob = UrlFetchApp.fetch(qrCodeUrl).getBlob();
+    var qrCodeBase64 = Utilities.base64Encode(qrCodeBlob.getBytes());
+    var qrCodeImage = `data:image/png;base64,${qrCodeBase64}`;
+
     return `
         <html>
         <body>
@@ -126,6 +133,8 @@ function generateHtmlTicketContent(status) {
             <p><strong>Status:</strong> ${status}</p>
             <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
             <p><strong>Event:</strong> Your Event Name</p>
+            <p><strong>Unique Code:</strong> ${uniqueHash}</p>
+            <p style="text-align: center;"><img src="${qrCodeImage}" alt="QR Code"></p>
             </div>
         </body>
         </html>
