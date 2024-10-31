@@ -1,6 +1,67 @@
 // This script is intended to be used as a Google Apps Script
 
-///main function
+/* Ticket parameters
+for easy customization per event */
+
+const EVENT_URL = 'Your Event URL'; // If you have a website for the event
+const EVENT_NAME = 'Your Event Name';
+const EVENT_DATE = 'Your Event Date';
+const EVENT_TIME = 'Your Event Time';
+const EVENT_PLACE = 'Your Event Place';
+
+/* Email generation functions
+Adjust these functions if you want to adjust the content of the emails sent.*/
+function generateHtmlMailContent(status) {
+    /* This function generates the HTML content for the email body based on the 
+    status of the form submission. */
+    return `
+        <html>
+        <body>
+            <p>Dear User,</p>
+            <p>Your form submission status is: <strong>${status}</strong></p>
+            <p>Thank you.</p>
+        </body>
+        </html>
+    `;
+}
+
+function generateHtmlTicketContent(status, uniqueHash) {
+    /* This function generates the HTML content for the event ticket.*/
+    var qrCodeUrl = `https://quickchart.io/qr?text=${encodeURIComponent(uniqueHash)}&size=150`;
+    var qrCodeBlob = UrlFetchApp.fetch(qrCodeUrl).getBlob();
+    var qrCodeBase64 = Utilities.base64Encode(qrCodeBlob.getBytes());
+    var qrCodeImage = `data:image/png;base64,${qrCodeBase64}`;
+
+    return `
+        <html>
+        <body>
+            <div style="border: 2px solid #000; padding: 20px; width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+            <h1 style="text-align: center;">Event Ticket</h1>
+            <p style="text-align: center;">Thank you for your submission.</p>
+            <hr>
+            <p><strong>Status:</strong> ${status}</p>
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>Event:</strong> Your Event Name</p>
+            <p><strong>Unique Code:</strong> ${uniqueHash}</p>
+            <p style="text-align: center;"><img src="${qrCodeImage}" alt="QR Code"></p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+function sendReminderEmail(email) {
+    /* This function sends a payment reminder email to the user. */
+    var subject = 'Reminder: Payment Pending';
+    var body = 'Dear User,\n\nThis is a reminder that your payment is still pending. Please complete your payment as soon as possible.\n\nThank you.';
+    MailApp.sendEmail(email, subject, body);
+}
+
+/* Main program logic
+The processResponse() function is the driving force of this program that trigger
+most of the other code. Unless programming, leave it be.*/
+
+///Main function to process form responses
 function processResponses() {
     // Run setup function to ensure the environment is set up
     setupSheet();
@@ -87,6 +148,8 @@ function processResponses() {
     }
 }
 
+/* Utility functions
+These help the program preform its tasks.*/
 function setupSheet() {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Form Responses 1'); // Change the sheet name if necessary
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -119,42 +182,6 @@ function determineStatus(row) {
     }
 }
 
-function generateHtmlMailContent(status) {
-    return `
-        <html>
-        <body>
-            <p>Dear User,</p>
-            <p>Your form submission status is: <strong>${status}</strong></p>
-            <p>Thank you.</p>
-        </body>
-        </html>
-    `;
-}
-
-function generateHtmlTicketContent(status, uniqueHash) {
-    var qrCodeUrl = `https://quickchart.io/qr?text=${encodeURIComponent(uniqueHash)}&size=150`;
-    var qrCodeBlob = UrlFetchApp.fetch(qrCodeUrl).getBlob();
-    var qrCodeBase64 = Utilities.base64Encode(qrCodeBlob.getBytes());
-    var qrCodeImage = `data:image/png;base64,${qrCodeBase64}`;
-
-    return `
-        <html>
-        <body>
-            <div style="border: 2px solid #000; padding: 20px; width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-            <h1 style="text-align: center;">Event Ticket</h1>
-            <p style="text-align: center;">Thank you for your submission.</p>
-            <hr>
-            <p><strong>Status:</strong> ${status}</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-            <p><strong>Event:</strong> Your Event Name</p>
-            <p><strong>Unique Code:</strong> ${uniqueHash}</p>
-            <p style="text-align: center;"><img src="${qrCodeImage}" alt="QR Code"></p>
-            </div>
-        </body>
-        </html>
-    `;
-}
-
 ///Converts HTML to PDF
 function convertHtmlToPdf(htmlContent, outputFilename) {
     var blob = Utilities.newBlob(htmlContent, 'text/html', 'status.html');
@@ -170,12 +197,6 @@ function shouldSendReminder(lastReminder) {
     var currentDate = new Date();
     var diffDays = Math.floor((currentDate - lastReminderDate) / (1000 * 60 * 60 * 24));
     return diffDays >= 3;
-}
-
-function sendReminderEmail(email) {
-    var subject = 'Reminder: Payment Pending';
-    var body = 'Dear User,\n\nThis is a reminder that your payment is still pending. Please complete your payment as soon as possible.\n\nThank you.';
-    MailApp.sendEmail(email, subject, body);
 }
 
 function generateUniqueHash(timestamp, email) {
