@@ -14,20 +14,33 @@ function processResponses() {
     var sentTicketStatusIndex = headers.indexOf('SentTicketStatus_auto');
     var lastReminderIndex = headers.indexOf('LastReminder');
     var reminderCountIndex = headers.indexOf('ReminderCount');
-    var hashIndex = headers.indexOf('UniqueHash');
+    var ticketIdIndex = headers.indexOf('ticket_id');
+
+    // Create a set to track existing ticket IDs
+    var existingTicketIds = new Set(data.slice(1).map(row => row[ticketIdIndex]));
 
     // Loop through each row of data (skip the header row)
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
 
-        // Generate and store unique hash if not already present
-        if (!row[hashIndex]) {
+        // Generate and store unique ticket_id if not already present
+        if (!row[ticketIdIndex]) {
             var timestamp = row[0]; // Use the timestamp from the first column
             var email = row[1]; // Assuming the email is the second column
             var uniqueHash = generateUniqueHash(timestamp, email);
-            sheet.getRange(i + 1, hashIndex + 1).setValue(uniqueHash);
+
+            // Ensure the ticket_id is unique
+            var increment = 0;
+            var originalHash = uniqueHash;
+            while (existingTicketIds.has(uniqueHash)) {
+                uniqueHash = `${originalHash}${increment}`;
+                increment++;
+            }
+
+            existingTicketIds.add(uniqueHash);
+            sheet.getRange(i + 1, ticketIdIndex + 1).setValue(uniqueHash);
         } else {
-            var uniqueHash = row[hashIndex];
+            var uniqueHash = row[ticketIdIndex];
         }
 
         // Skip the row if the SentTicketStatus_auto column is already set to 1
@@ -90,8 +103,8 @@ function setupSheet() {
     if (headers.indexOf('ReminderCount') === -1) {
         sheet.getRange(1, headers.length + 4).setValue('ReminderCount');
     }
-    if (headers.indexOf('UniqueHash') === -1) {
-        sheet.getRange(1, headers.length + 5).setValue('UniqueHash');
+    if (headers.indexOf('ticket_id') === -1) {
+        sheet.getRange(1, headers.length + 5).setValue('ticket_id');
     }
 }
 
