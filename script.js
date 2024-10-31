@@ -1,5 +1,6 @@
 // This script is intended to be used as a Google Apps Script
 
+///main function
 function processResponses() {
     // Run setup function to ensure the environment is set up
     setupSheet();
@@ -71,7 +72,7 @@ function processResponses() {
         var htmlTicket = generateHtmlTicketContent(status, uniqueHash);
 
         // Convert HTML to PDF
-        var pdf = convertHtmlToPdf(htmlTicket);
+        var pdf = convertHtmlToPdf(htmlTicket, `biljett_${uniqueHash}.pdf`);
 
         // Send email with PDF attachment
         MailApp.sendEmail({
@@ -154,9 +155,10 @@ function generateHtmlTicketContent(status, uniqueHash) {
     `;
 }
 
-function convertHtmlToPdf(htmlContent) {
+///Converts HTML to PDF
+function convertHtmlToPdf(htmlContent, outputFilename) {
     var blob = Utilities.newBlob(htmlContent, 'text/html', 'status.html');
-    var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName('biljett.pdf');
+    var pdf = DriveApp.createFile(blob).getAs('application/pdf').setName(outputFilename);
     return pdf;
 }
 
