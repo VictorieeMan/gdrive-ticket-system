@@ -1,6 +1,4 @@
 // This script is intended to be used as a Google Apps Script
-// Script repo url: https://github.com/VictorieeMan/gdrive-ticket-system
-// Check the repo for updates and information on how to use the script.
 
 function processResponses() {
     // Run setup function to ensure the environment is set up
@@ -16,10 +14,19 @@ function processResponses() {
     var sentTicketStatusIndex = headers.indexOf('SentTicketStatus_auto');
     var lastReminderIndex = headers.indexOf('LastReminder');
     var reminderCountIndex = headers.indexOf('ReminderCount');
+    var hashIndex = headers.indexOf('UniqueHash');
 
     // Loop through each row of data (skip the header row)
     for (var i = 1; i < data.length; i++) {
         var row = data[i];
+
+        // Generate and store unique hash if not already present
+        if (!row[hashIndex]) {
+            var timestamp = row[0]; // Use the timestamp from the first column
+            var email = row[1]; // Assuming the email is the second column
+            var uniqueHash = generateUniqueHash(timestamp, email);
+            sheet.getRange(i + 1, hashIndex + 1).setValue(uniqueHash);
+        }
 
         // Skip the row if the SentTicketStatus_auto column is already set to 1
         if (row[sentTicketStatusIndex] == '1') {
@@ -80,6 +87,9 @@ function setupSheet() {
     }
     if (headers.indexOf('ReminderCount') === -1) {
         sheet.getRange(1, headers.length + 4).setValue('ReminderCount');
+    }
+    if (headers.indexOf('UniqueHash') === -1) {
+        sheet.getRange(1, headers.length + 5).setValue('UniqueHash');
     }
 }
 
@@ -144,28 +154,34 @@ function sendReminderEmail(email) {
     MailApp.sendEmail(email, subject, body);
 }
 
-/*
-MIT License
+function generateUniqueHash(timestamp, email) {
+    var baseString = timestamp + email;
+    var hash = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, baseString)
+        .map(function(byte) {
+            return (byte & 0xFF).toString(16).padStart(2, '0');
+        })
+        .join('');
+    return hashToCustomFormat(hash);
+}
 
-Copyright (c) 2024 VictorieeMan
+function hashToCustomFormat(hash) {
+    var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var numbers = '0123456789';
+    var customHash = '';
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+    // Generate two leading letters
+    for (var i = 0; i < 2; i++) {
+        var index = parseInt(hash.substr(i * 2, 2), 16) % letters.length;
+        customHash += letters.charAt(index);
+    }
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+    customHash += '-'; // Add a hyphen in between
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+    // Generate two trailing numbers
+    for (var i = 2; i < 4; i++) {
+        var index = parseInt(hash.substr(i * 2, 2), 16) % numbers.length;
+        customHash += numbers.charAt(index);
+    }
 
-Repo URL: https://github.com/VictorieeMan/gdrive-ticket-system
-*/
+    return customHash;
+}
